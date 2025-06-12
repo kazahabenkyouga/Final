@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pie Chart</title>
+    <script src="{% static 'accountbook/js/script.js'%}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style> #myPieChart {
+      margin: 0 auto;        /* 横方向の中央寄せ */
+      display: block;
+    }
+        #chart-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400px;  /* 親の高さを指定 */
+}
+
+
+    </style>
+
+</head>
+<body>
+    <h1 style="text-align: center;, font-size: 3rem;">今月のクレジットカード請求</h1>
+    <button id="refresh-btn" style="border:none; background:none; cursor:pointer;">
+  <svg width="40" height="40" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="45" stroke="black" stroke-width="5" fill="none"/>
+    <path d="M50 15 L65 35 L35 35 Z" fill="black" /> <!-- 矢印（三角形） -->
+    <!-- 円に沿った矢印を描く場合はSVGパスを調整してください -->
+  </svg>
+</button>
+
+     <div class="nav-container">
+        <a href="{% url 'pie_chart_month' prev_year prev_month %}" class="nav-link">先月の請求</a>
+        <div class="current-month">{{ current_month }}月</div>
+        <a href="{% url 'pie_chart_month' next_year next_month  %}" class="nav-link">来月の請求</a>
+    </div>
+
+<div id = "chart-container">
+<canvas id="myPieChart" width="200" height="200"></canvas>
+</div>
+    <script>
+        const ctx = document.getElementById('myPieChart').getContext('2d');
+        const myPieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: {{ labels|safe }},
+                datasets: [{
+                    data: {{ data|safe }},
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)'
+                    ]
+                }]
+            },
+            options: {
+                responsive:false
+            }
+        });
+    </script>
+</body>
+</html>
