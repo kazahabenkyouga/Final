@@ -14,6 +14,22 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 MONEY_REGEX = r'(¥?\d{1,3}(?:,\d{3})*円?|¥\d+)'
 TARGET_SENDER = 'statement@vpass.ne.jp'
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def get_gmail_data(request):
+    if request.method == 'POST':
+        try:
+            fetch_and_save_gmail_data()  # 実際にメール取得＆DB保存する関数を呼ぶ
+
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'invalid method'}, status=405)
+
+
 def fetch_and_save_gmail_data():
     service = get_gmail_service()
     messages = get_emails_from_sender(service, TARGET_SENDER)
@@ -21,7 +37,6 @@ def fetch_and_save_gmail_data():
     for msg in messages:
         msg_id = msg['id']
 
-        # すでに保存済みならスキップ（重複防止）
         if GmailTransaction.objects.filter(message_id=msg_id).exists():
             continue
 
@@ -29,13 +44,11 @@ def fetch_and_save_gmail_data():
         usage_data = extract_amounts_from_html(html_body)
 
         for usage_date_str, amount_str in usage_data:
-            # 日時パース（例："2024/06/01 12:34" → datetime）
             try:
                 usage_datetime = datetime.strptime(usage_date_str, "%Y/%m/%d %H:%M")
             except ValueError:
-                continue  # パースできなければ無視
+                continue
 
-            # 金額変換（例："1,234円" → 1234）
             amount_clean = int(re.sub(r'[^\d]', '', amount_str))
 
             GmailTransaction.objects.create(
@@ -43,6 +56,7 @@ def fetch_and_save_gmail_data():
                 amount=amount_clean,
                 message_id=msg_id
             )
+
 
 def extract_amounts_from_html(html):
     soup = BeautifulSoup(html, 'html.parser')
@@ -71,7 +85,7 @@ def get_gmail_service():
     return build('gmail', 'v1', credentials=creds)
 
 def get_emails_from_sender(service, sender_email, max_results=10):
-    query = f'from:{TARGET_SENDER}'
+    query = f'from:{TARGET_SENDER} newer_than:3m'
     results = service.users().messages().list(userId='me', q=query, maxResults=max_results).execute()
     messages = results.get('messages', [])
     return messages
@@ -108,3 +122,4 @@ def main():
 if __name__=='__main__':
     main()
 
+#

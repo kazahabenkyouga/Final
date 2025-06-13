@@ -1,10 +1,15 @@
-<!DOCTYPE html>
 {% load static %}
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Pie Chart</title>
-    <script src="{% static 'accountbook/js/script.js'%}"></script>
+<link rel="stylesheet" href="/static/accountbook/css/uum.css">
+    <script>
+    const fetchUrl = "{% url 'fetch_credit_info' %}";
+  </script>
+    <script src="{% static 'accountbook/js/scripts.js'%}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style> #myPieChart {
       margin: 0 auto;        /* 横方向の中央寄せ */
@@ -22,14 +27,15 @@
 
 </head>
 <body>
-    <h1 style="text-align: center;, font-size: 3rem;">今月のクレジットカード請求</h1>
-    <button id="refresh-btn" style="border:none; background:none; cursor:pointer;">
-  <svg width="40" height="40" viewBox="0 0 100 100">
+    <h1 style="text-align: center; font-size: 3rem;">今月のクレジットカード請求</h1>
+    <button id="refresh-btn" type="button">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
     <circle cx="50" cy="50" r="45" stroke="black" stroke-width="5" fill="none"/>
-    <path d="M50 15 L65 35 L35 35 Z" fill="black" /> <!-- 矢印（三角形） -->
-    <!-- 円に沿った矢印を描く場合はSVGパスを調整してください -->
+    <path d="M50 15 L65 35 L35 35 Z" />
   </svg>
+  更新
 </button>
+
 
      <div class="nav-container">
         <a href="{% url 'pie_chart_month' prev_year prev_month %}" class="nav-link">先月の請求</a>
@@ -37,17 +43,29 @@
         <a href="{% url 'pie_chart_month' next_year next_month  %}" class="nav-link">来月の請求</a>
     </div>
 
-<div id = "chart-container">
-<canvas id="myPieChart" width="200" height="200"></canvas>
-</div>
+<div id="chart-container">
+    <canvas id="myPieChart" width="200" height="200" style="display: none;"></canvas>
+    <div id="no-data-message" style="display: none; text-align: center; font-size: 2rem;">
+        今月は参照する記録がありません。
+    </div>
     <script>
+        const labels = {{ labels|safe }};
+    const dataValues = {{ data|safe }};
+
+    if (dataValues.length === 0 || dataValues.reduce((a, b) => a + b, 0) === 0) {
+        // データが空、または全てゼロ → メッセージを表示
+        document.getElementById('myPieChart').style.display = 'none';
+        document.getElementById('no-data-message').style.display = 'block';
+    } else {
+        // 通常のグラフ描画
+        document.getElementById('myPieChart').style.display = 'block';
         const ctx = document.getElementById('myPieChart').getContext('2d');
         const myPieChart = new Chart(ctx, {
             type: 'pie',
             data: {
-                labels: {{ labels|safe }},
+                labels: labels,
                 datasets: [{
-                    data: {{ data|safe }},
+                    data: dataValues,
                     backgroundColor: [
                         'rgba(255, 99, 132, 0.6)',
                         'rgba(54, 162, 235, 0.6)',
@@ -56,9 +74,10 @@
                 }]
             },
             options: {
-                responsive:false
+                responsive: false
             }
         });
+    }
     </script>
 </body>
 </html>
