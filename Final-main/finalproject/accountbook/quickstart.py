@@ -17,22 +17,79 @@ TARGET_SENDER = 'statement@vpass.ne.jp'
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+
+
+def get_gmail_data_and_unclassified_items():
+    updated, new_record_ids = fetch_and_save_gmail_data()
+
+    # 新規登録分かつまだ未分類のものだけ
+    unclassified_items = list(
+        GmailTransaction.objects
+        .filter(id__in=new_record_ids, category='未分類')
+        .values('id', 'usage_datetime', 'amount')
+    )
+
+    return updated, unclassified_items
+
+
 @csrf_exempt
 def get_gmail_data(request):
     if request.method == 'POST':
         try:
-            fetch_and_save_gmail_data()  # 実際にメール取得＆DB保存する関数を呼ぶ
-
-            return JsonResponse({'status': 'success'})
+            updated = fetch_and_save_gmail_data()
+            return updated  # True/Falseを返すだけに変更
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            raise
 
     return JsonResponse({'status': 'invalid method'}, status=405)
 
+def get_gmail_data_and_unclassified_items():
+    updated, new_record_ids = fetch_and_save_gmail_data()
 
+    # 新規登録分かつまだ未分類のものだけ
+    unclassified_items = list(
+        GmailTransaction.objects
+        .filter(id__in=new_record_ids, category='未分類')
+        .values('id', 'usage_datetime', 'amount')
+    )
+
+    return updated, unclassified_items
+
+# def fetch_and_save_gmail_data():
+#     service = get_gmail_service()
+#     messages = get_emails_from_sender(service, TARGET_SENDER)
+#
+#     updated = False
+#     for msg in messages:
+#         msg_id = msg['id']
+#
+#         if GmailTransaction.objects.filter(message_id=msg_id).exists():
+#             continue
+#
+#         html_body = extract_email_body(service, msg_id)
+#         usage_data = extract_amounts_from_html(html_body)
+#
+#         for usage_date_str, amount_str in usage_data:
+#             try:
+#                 usage_datetime = datetime.strptime(usage_date_str, "%Y/%m/%d %H:%M")
+#             except ValueError:
+#                 continue
+#
+#             amount_clean = int(re.sub(r'[^\d]', '', amount_str))
+#
+#             GmailTransaction.objects.create(
+#                 usage_datetime=usage_datetime,
+#                 amount=amount_clean,
+#                 message_id=msg_id
+#             )
+#             updated = True
+#     return updated
 def fetch_and_save_gmail_data():
     service = get_gmail_service()
     messages = get_emails_from_sender(service, TARGET_SENDER)
+
+    updated = False
+    new_record_ids = []
 
     for msg in messages:
         msg_id = msg['id']
@@ -51,11 +108,16 @@ def fetch_and_save_gmail_data():
 
             amount_clean = int(re.sub(r'[^\d]', '', amount_str))
 
-            GmailTransaction.objects.create(
+            record = GmailTransaction.objects.create(
                 usage_datetime=usage_datetime,
                 amount=amount_clean,
-                message_id=msg_id
+                message_id=msg_id,
+                category='未分類'  # ここはデフォルトでも良いですが明示的にセット
             )
+            new_record_ids.append(record.id)
+            updated = True
+
+    return updated, new_record_ids
 
 
 def extract_amounts_from_html(html):

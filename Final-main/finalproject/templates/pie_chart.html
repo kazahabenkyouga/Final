@@ -1,83 +1,369 @@
 {% load static %}
-
-<!DOCTYPE html>
-<html lang="en">
+    {% load humanize %}
+<html lang="ja">
 <head>
+
+
     <meta charset="UTF-8">
     <title>Pie Chart</title>
-<link rel="stylesheet" href="/static/accountbook/css/uum.css">
+  {% load static %}
+    <link href="{% static 'accountbook/css/uum.css' %}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+
     <script>
-    const fetchUrl = "{% url 'fetch_credit_info' %}";
-  </script>
-    <script src="{% static 'accountbook/js/scripts.js'%}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style> #myPieChart {
-      margin: 0 auto;        /* 横方向の中央寄せ */
-      display: block;
-    }
-        #chart-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 400px;  /* 親の高さを指定 */
-}
-
-
-    </style>
-
+  const labels = {{ labels|safe }};
+  const dataValues = {{ data|safe }};
+  const fetchUrl = "{% url 'fetch_credit_info' %}";
+</script>
 </head>
 <body>
-    <h1 style="text-align: center; font-size: 3rem;">今月のクレジットカード請求</h1>
-    <button id="refresh-btn" type="button">
-  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="45" stroke="black" stroke-width="5" fill="none"/>
-    <path d="M50 15 L65 35 L35 35 Z" />
-  </svg>
-  更新
-</button>
+<style>
+  #refresh-btn.btn-outline-dark:hover {
+    color: black !important;
+    background-color: #e2e6ea;
+    border-color: black !important;
+  }
+
+  h1.display-4 {
+    font-weight: 900;
+  }
+   #refresh-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;  /* テキストの色に合わせる */
+  }
+</style>
+<div class="container my-5">
+   <div class="d-flex justify-content-start mb-3">
+    <a href="{% url 'line_graph' %}" class="btn btn-primary">折れ線グラフ</a>
+  </div>
+  <h1 class="text-center display-4 mb-4">今月のクレジットカード請求</h1>
+
+  <div class="d-flex justify-content-end mb-3">
+  <button id="refresh-btn" class="btn btn-outline-dark d-flex align-items-center px-3 py-2">
+ <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="me-2" aria-hidden="true" focusable="false" role="img">      <circle cx="50" cy="50" fill="none" r="45" stroke="black" stroke-width="5"/>
+      <path d="M50 15 L65 35 L35 35 Z" fill="currentColor"/>
+    </svg>
+    更新
+  </button>
+</div>
 
 
-     <div class="nav-container">
-        <a href="{% url 'pie_chart_month' prev_year prev_month %}" class="nav-link">先月の請求</a>
-        <div class="current-month">{{ current_month }}月</div>
-        <a href="{% url 'pie_chart_month' next_year next_month  %}" class="nav-link">来月の請求</a>
+
+  <div class="d-flex justify-content-center align-items-center mb-4 gap-4">
+    <a class="btn btn-outline-primary" href="{% url 'pie_chart_month' prev_year prev_month %}">先月の請求</a>
+    <div class="h5 mb-0">{{ current_month }}月</div>
+    <a class="btn btn-outline-primary" href="{% url 'pie_chart_month' next_year next_month  %}">来月の請求</a>
+  </div>
+
+  <!-- 必ず safe|escapejs を両方使う -->
+
+<div class="d-flex justify-content-center my-3">
+
+  <div class="btn-group" role="group">
+    <button id="category-btn" class="btn btn-outline-primary active">カテゴリー別</button>
+    <button id="tag-btn" class="btn btn-outline-primary">タグ別</button>
+  </div>
+<!-- 必ず safe|escapejs を両方使う -->
+
+</div>
+  <div class="d-flex justify-content-center mb-4">
+    <canvas id="myPieChart" width="600" height="600"></canvas>
+  </div>
+
+  <div id="no-data-message" class="text-center fs-3 text-muted" style="display: none;">
+    今月は参照する記録がありません。
+  </div>
+
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+  <div id="chart-data"
+     data-labels='{{ labels|safe|escapejs }}'
+     data-values='{{ data|safe|escapejs }}'
+     data-tag-labels='{{ tag_labels|safe|escapejs }}'
+     data-tag-values='{{ tag_values|default:"[]"|safe|escapejs }}'>
+</div>
+
+  <script>
+
+  </script>
+  <!-- 合計金額表示 -->
+  <div class="text-center mt-4">
+    <div class="card mx-auto shadow-sm" style="max-width: 400px;">
+      <div class="card-body">
+        <h5 class="card-title">今月の合計金額</h5>
+        <p class="card-text display-6">¥{{ total_amount |intcomma }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--    めえええええええええええええええええええええええ-->
+ <h2 class="text-center mt-4">{{ current_year }}年{{ current_month }}月の明細一覧</h2>
+
+
+<!--カテゴリー設定のコード-->
+{% if details %}
+<div class="container mt-4">
+  <div class="text-center mb-3">
+    <button class="btn btn-primary me-2" id="edit-btn">編集</button>
+    <button class="btn btn-success d-none" id="save-btn">確定</button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-bordered text-center align-middle" id="detail-table">
+      <thead class="table-light">
+        <tr>
+          <th>日付</th>
+          <th>カテゴリー</th>
+          <th>金額</th>
+          <th>タグ/コメント</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in details %}
+          <tr data-id="{{ item.id }}">
+            <td>{{ item.date }}</td>
+            <td class="category-cell">
+              <span class="category-text">{{ item.category }}</span>
+              <select class="form-select category-select d-none">
+                {% for cat in categories %}
+                  <option value="{{ cat }}" {% if cat == item.category %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>¥{{ item.amount|intcomma }}</td>
+            <td class="tag-cell">
+  <span class="tag-text">{{ item.tag }}</span> <!-- 👈 ココが必要 -->
+  <input type="text" class="form-control tag-input d-none" value="{{ item.tag }}"> <!-- 👈 ここも -->
+</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+  <p class="text-center">該当する明細はありません。</p>
+{% endif %}
+
+<!--カテゴリー分類-->
+<!--<script>-->
+<!--document.getElementById('edit-btn').addEventListener('click', function () {-->
+<!--  document.querySelectorAll('#detail-table .category-cell').forEach(cell => {-->
+<!--    const span = cell.querySelector('.category-text');-->
+<!--    const select = cell.querySelector('.category-select');-->
+<!--    span.classList.add('d-none');-->
+<!--    select.classList.remove('d-none');-->
+<!--  });-->
+<!--  document.getElementById('edit-btn').classList.add('d-none');-->
+<!--  document.getElementById('save-btn').classList.remove('d-none');-->
+<!--});-->
+
+<!--document.getElementById('save-btn').addEventListener('click', function () {-->
+<!--  document.querySelectorAll('#detail-table .category-cell').forEach(cell => {-->
+<!--    const span = cell.querySelector('.category-text');-->
+<!--    const select = cell.querySelector('.category-select');-->
+<!--    const selectedValue = select.value;-->
+<!--    span.textContent = selectedValue;-->
+<!--    span.classList.remove('d-none');-->
+<!--    select.classList.add('d-none');-->
+<!--  });-->
+<!--  document.getElementById('save-btn').classList.add('d-none');-->
+<!--  document.getElementById('edit-btn').classList.remove('d-none');-->
+<!--});-->
+<!--</script>-->
+
+<!--DB更新の処理-->
+<!--<script>-->
+<!--document.getElementById('save-btn').addEventListener('click', function () {-->
+<!--  const updatedData = [];-->
+
+<!--  document.querySelectorAll('#detail-table tbody tr').forEach(row => {-->
+<!--    const id = row.dataset.id;-->
+<!--    const select = row.querySelector('.category-select');-->
+<!--    const span = row.querySelector('.category-text');-->
+<!--    const selectedValue = select.value;-->
+
+<!--    // 表示を更新-->
+<!--    span.textContent = selectedValue;-->
+<!--    span.classList.remove('d-none');-->
+<!--    select.classList.add('d-none');-->
+
+<!--    // データを配列に保存-->
+<!--    updatedData.push({ id: id, category: selectedValue });-->
+<!--  });-->
+
+<!--  // サーバーに送信（JSON）-->
+<!--  fetch('{% url "update_categories" %}', {-->
+<!--    method: 'POST',-->
+<!--    headers: {-->
+<!--      'Content-Type': 'application/json',-->
+<!--      'X-CSRFToken': '{{ csrf_token }}'-->
+<!--    },-->
+<!--    body: JSON.stringify({ updates: updatedData })-->
+<!--  })-->
+<!--  .then(response => response.json())-->
+<!--  .then(data => {-->
+<!--    if (data.success) {-->
+<!--      alert('カテゴリーを更新しました');-->
+<!--    } else {-->
+<!--      alert('更新に失敗しました');-->
+<!--    }-->
+<!--  })-->
+<!--  .catch(error => {-->
+<!--    console.error('Error:', error);-->
+<!--    alert('エラーが発生しました');-->
+<!--  });-->
+
+<!--  document.getElementById('save-btn').classList.add('d-none');-->
+<!--  document.getElementById('edit-btn').classList.remove('d-none');-->
+<!--});-->
+<!--</script>-->
+
+
+
+<!--円の処理内容-->
+<!--    <script>const labels = {{ labels|safe }};-->
+<!--    const dataValues = {{ data|safe }};-->
+
+<!--    if (dataValues.length === 0 || dataValues.reduce((a, b) => a + b, 0) === 0) {-->
+<!--        // データが空、または全てゼロ → メッセージを表示-->
+<!--        document.getElementById('myPieChart').style.display = 'none';-->
+<!--        document.getElementById('no-data-message').style.display = 'block';-->
+<!--    } else {-->
+<!--        // 通常のグラフ描画-->
+<!--        document.getElementById('myPieChart').style.display = 'block';-->
+<!--        const ctx = document.getElementById('myPieChart').getContext('2d');-->
+<!--        const myPieChart = new Chart(ctx, {-->
+<!--            type: 'pie',-->
+<!--            data: {-->
+<!--                labels: labels,-->
+<!--                datasets: [{-->
+<!--                    data: dataValues,-->
+<!--                    backgroundColor: [-->
+<!--                        'rgba(255, 99, 132, 0.6)',-->
+<!--                        'rgba(54, 162, 235, 0.6)',-->
+<!--                        'rgba(255, 206, 86, 0.6)',-->
+<!--                        'rgba(75, 192, 192, 0.6)',-->
+<!--                        'rgba(153, 102, 255, 0.6)',-->
+<!--                        'rgba(255, 159, 64, 0.6)'-->
+<!--                    ]-->
+<!--                }]-->
+<!--            },-->
+<!--            options: {-->
+<!--                responsive: false-->
+<!--            }-->
+<!--        });-->
+<!--    }-->
+
+
+<!-- カテゴリー選択モーダル -->
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"> <!-- 中央表示のためにクラス追加 -->
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="categoryModalLabel">カテゴリー選択</h5>
+      </div>
+      <div class="modal-body">
+        <p id="modal-message"></p>
+        <select id="category-select" class="form-select">
+          <option value="">-- カテゴリーを選択してください --</option>
+          {% for cat in categories %}
+            <option value="{{ cat }}">{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="save-category-btn" class="btn btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+    <div id="detail-list" style="margin-top: 30px; max-width: 600px; margin-left: auto; margin-right: auto;">
+        <!-- ここにクリックしたカテゴリーの明細リストを表示 -->
     </div>
 
-<div id="chart-container">
-    <canvas id="myPieChart" width="200" height="200" style="display: none;"></canvas>
-    <div id="no-data-message" style="display: none; text-align: center; font-size: 2rem;">
-        今月は参照する記録がありません。
-    </div>
-    <script>
-        const labels = {{ labels|safe }};
-    const dataValues = {{ data|safe }};
+</div>
 
-    if (dataValues.length === 0 || dataValues.reduce((a, b) => a + b, 0) === 0) {
-        // データが空、または全てゼロ → メッセージを表示
-        document.getElementById('myPieChart').style.display = 'none';
-        document.getElementById('no-data-message').style.display = 'block';
-    } else {
-        // 通常のグラフ描画
-        document.getElementById('myPieChart').style.display = 'block';
-        const ctx = document.getElementById('myPieChart').getContext('2d');
-        const myPieChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: dataValues,
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.6)',
-                        'rgba(54, 162, 235, 0.6)',
-                        'rgba(255, 206, 86, 0.6)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: false
-            }
-        });
-    }
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'accountbook/js/scripts.js'%}"></script>
+<!-- Bootstrap CSS（もう読み込まれているなら不要） -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Bootstrap JavaScript（これが必要！） -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.getElementById('edit-btn').addEventListener('click', function () {
+    document.querySelectorAll('#detail-table .category-cell').forEach(cell => {
+      cell.querySelector('.category-text').classList.add('d-none');
+      cell.querySelector('.category-select').classList.remove('d-none');
+    });
+
+    document.querySelectorAll('#detail-table .tag-cell').forEach(cell => {
+      cell.querySelector('.tag-text').classList.add('d-none');
+      cell.querySelector('.tag-input').classList.remove('d-none');
+    });
+
+    document.getElementById('edit-btn').classList.add('d-none');
+    document.getElementById('save-btn').classList.remove('d-none');
+  });
+
+  document.getElementById('save-btn').addEventListener('click', function () {
+    const updates = [];
+
+    document.querySelectorAll('#detail-table tbody tr').forEach(row => {
+      const id = row.dataset.id;
+      const category = row.querySelector('.category-select').value;
+      const tag = row.querySelector('.tag-input').value;
+
+      row.querySelector('.category-text').textContent = category;
+      row.querySelector('.category-text').classList.remove('d-none');
+      row.querySelector('.category-select').classList.add('d-none');
+
+      row.querySelector('.tag-text').textContent = tag;
+      row.querySelector('.tag-text').classList.remove('d-none');
+      row.querySelector('.tag-input').classList.add('d-none');
+
+      updates.push({ id, category, tag });  // 👈 タグも送信
+    });
+
+    document.getElementById('save-btn').classList.add('d-none');
+    document.getElementById('edit-btn').classList.remove('d-none');
+
+    fetch("{% url 'update_categories' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ updates: updates })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status !== 'success') {
+        alert('保存に成功しました');
+      }
+    })
+    .catch(error => {
+      alert('通信エラー: ' + error);
+    });
+  });
+});
+</script>
 </body>
 </html>
+
+

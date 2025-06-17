@@ -1,0 +1,65 @@
+{% load static %}
+
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Line Graph Example</title>
+    <!-- Bootstrap CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="container mt-4">
+    <h1 class="mb-4">今月のクレカ使用推移</h1>
+
+
+</div>
+<canvas id="comparisonChart"></canvas>
+
+<script>
+    const labels = {{ labels|safe }};
+    const avgCumulative = {{ avg_cumulative|safe }};
+    const currentCumulative = {{ current_cumulative|safe }};
+
+    const ctx = document.getElementById('comparisonChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '過去2ヶ月平均の累積金額',
+                    data: avgCumulative,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: false,
+                    tension: 0.3
+                },
+                {
+                    label: '{{ current_month_label }}の累積金額',
+                    data: currentCumulative,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    fill: false,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            scales: {
+                x: {
+                    title: { display: true, text: '日付（1〜31日）' }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: '累積金額（円）' }
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
